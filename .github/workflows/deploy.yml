@@ -1,0 +1,33 @@
+name: Deploy to Production
+
+# This workflow runs automatically on every push to the 'main' branch
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest # The virtual machine the job runs on
+
+    steps:
+    # Step 1: Check out the repository's code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 2: SSH into the server and run the deployment script
+    - name: SSH and Deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Navigate to the project directory on the server
+          cd ~/reconbot
+
+          # Pull the latest changes from the main branch on GitHub
+          git pull origin main
+
+          # Use Docker Compose to rebuild and restart the services in detached mode
+          docker-compose up --build -d

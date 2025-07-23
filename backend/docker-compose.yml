@@ -1,0 +1,46 @@
+# 👇 This is the most correct one (your final posted version)
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reconbot-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      SQLALCHEMY_DATABASE_URL: "postgresql://mohi:Shizaan7.@db:5432/reconbot_db"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  db:
+    image: postgres:16.2-alpine
+    container_name: reconbot-postgres
+    environment:
+      POSTGRES_DB: reconbot_db
+      POSTGRES_USER: mohi
+      POSTGRES_PASSWORD: Shizaan7.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge

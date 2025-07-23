@@ -1,0 +1,19 @@
+# Environment variables
+.env
+backend/.env
+frontend/.env*
+
+# Python
+__pycache__/
+*.pyc
+venv/
+backend/venv/
+.venv/
+env/
+
+# Docker
+certbot/
+
+# IDE files
+.vscode/
+.idea/

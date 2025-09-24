@@ -1,3 +1,4 @@
+# Core dependencies
 pandas
 fastapi
 uvicorn
@@ -17,39 +18,37 @@ langchain-community
 langchain-core
 langchain-text-splitters
 langchain-experimental
-pdfplumber
-pytesseract
-pdf2image
-langchain-openai
-langchain
-langchain-community
-langchain-core
-langchain-text-splitters
-langchain-experimental
 psycopg2-binary
 python-jose[cryptography]==3.3.0
-pdfplumber
-pytesseract
-pdf2image
-langchain-openai
-langchain
-langchain-community
-langchain-core
-langchain-text-splitters
-langchain-experimental
-psycopg2-binary
-pdfplumber
-pytesseract
-pdf2image
-langchain-openai
-langchain
-langchain-community
-langchain-core
-langchain-text-splitters
-langchain-experimental
-psycopg2-binary
-python-jose[cryptography]==3.3.0
-passlib==1.7.4
+passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 tabulate==0.9.0
 email-validator
+celery
+redis
+requests>=2.31.0
+urllib3>=2.0.0
+python-dotenv
+sqlalchemy
+
+# Machine learning / data science
+scikit-learn
+Levenshtein
+scipy>=1.9.0
+
+# Optional performance / debugging
+memory-profiler>=0.60.0
+
+# --- Built-in modules (DO NOT install via pip) ---
+# dataclasses  # Built-in since Python 3.7
+# concurrent.futures
+# threading
+# queue
+# pickle
+# hashlib
+# asyncio
+# logging
+# time
+# json
+# re
+# os

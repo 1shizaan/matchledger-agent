@@ -1,8 +1,56 @@
-# 👇 This is the most correct one (your final posted version)
+# # 👇 This is the most correct one (your final posted version)
+
+# version: '3.8'
+
+# services:
+#   app:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     container_name: reconbot-api
+#     ports:
+#       - "8000:8000"
+#     env_file:
+#       - ./backend/.env
+#     environment:
+#       SQLALCHEMY_DATABASE_URL: "postgresql://mohi:Shizaan7.@db:5432/reconbot_db"
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#     networks:
+#       - app_network
+
+#   db:
+#     image: postgres:16.2-alpine
+#     container_name: reconbot-postgres
+#     environment:
+#       POSTGRES_DB: reconbot_db
+#       POSTGRES_USER: mohi
+#       POSTGRES_PASSWORD: Shizaan7.
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - app_network
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 10s
+
+# volumes:
+#   postgres_data:
+
+# networks:
+#   app_network:
+#     driver: bridge
+
+# docker-compose.yml (NEW VERSION)
 
 version: '3.8'
 
 services:
+  # The FastAPI Web Server
   app:
     build:
       context: ./backend
@@ -14,12 +62,40 @@ services:
       - ./backend/.env
     environment:
       SQLALCHEMY_DATABASE_URL: "postgresql://mohi:Shizaan7.@db:5432/reconbot_db"
+      # Add broker URL for Celery
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - app_network
 
+  # The Background Worker
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reconbot-worker
+    # Command to start the Celery worker
+    command: sh -c "celery -A app.celery_app.celery worker --loglevel=info"
+    env_file:
+      - ./backend/.env
+    environment:
+      SQLALCHEMY_DATABASE_URL: "postgresql://mohi:Shizaan7.@db:5432/reconbot_db"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - app_network
+
+  # The PostgreSQL Database
   db:
     image: postgres:16.2-alpine
     container_name: reconbot-postgres
@@ -37,6 +113,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  # The Redis Broker
+  redis:
+    image: redis:7-alpine
+    container_name: reconbot-redis
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:

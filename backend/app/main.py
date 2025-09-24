@@ -1,15 +1,15 @@
-# main.py
-
+# main.py - FIXED VERSION
 from dotenv import load_dotenv
-load_dotenv() # Ensure environment variables are loaded first
+load_dotenv()  # Ensure environment variables are loaded first
 
-import os # Import the os module
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-
 from app.api.routes import router as api_router
+from app.api.analytics import router as analytics_router
+# ❌ REMOVED: from app.api.reconciliation import router as reconciliation_router  # THIS FILE DOESN'T EXIST!
 from app.auth.routers import router as auth_router
 from app.db import init_db
 
@@ -28,8 +28,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 # --- ✅ CORRECTED CORS CONFIGURATION ---
 # Define production origins as a default
 origins = [
-    "https://coldemailai.in",
-    "https://www.coldemailai.in",
+    "https://matchledger.in",
+    "https://www.matchledger.in",
 ]
 
 # Get allowed origins from environment variable
@@ -41,7 +41,7 @@ if allowed_origins_env:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Use the dynamic origins list
+    allow_origins=origins,  # Use the dynamic origins list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,7 +53,9 @@ def on_startup():
     init_db()
 
 # Include Routers with Prefixes
-app.include_router(api_router, prefix="/api") # Correctly prefix the api_router
+app.include_router(api_router, prefix="/api")  # This contains all your reconciliation endpoints
+app.include_router(analytics_router, prefix="/api/analytics")
+# ❌ REMOVED: app.include_router(reconciliation_router, prefix="/api/reconciliation")  # THIS DOESN'T EXIST!
 app.include_router(auth_router, prefix="/auth")
 
 @app.get("/")

@@ -1,61 +1,4 @@
-// const ResultsTable = ({ title, data }) => {
-//   // 🛠️ Flatten deeply nested rows for uniform rendering
-//   const flattenRow = (row) => {
-//     const flat = {};
-//     for (const key in row) {
-//       if (typeof row[key] === "object" && row[key] !== null && !Array.isArray(row[key])) {
-//         // Merge nested object keys with prefix
-//         for (const subKey in row[key]) {
-//           flat[`${key}_${subKey}`] = row[key][subKey];
-//         }
-//       } else {
-//         flat[key] = row[key];
-//       }
-//     }
-//     return flat;
-//   };
-
-//   const flattenedData = data.map(flattenRow);
-//   const headers = flattenedData.length > 0 ? Object.keys(flattenedData[0]) : [];
-
-//   return (
-//     <div className="mt-6">
-//       <h3 className="text-lg font-semibold mb-2">{title}</h3>
-//       <div className="overflow-auto border rounded-xl shadow-sm">
-//         <table className="min-w-full text-sm">
-//           <thead className="bg-gray-100">
-//             <tr>
-//               {headers.map((col) => (
-//                 <th key={col} className="px-4 py-2 text-left">{col}</th>
-//               ))}
-//             </tr>
-//           </thead>
-//           <tbody>
-//            {flattenedData.map((row, idx) => (
-//              <tr key={idx} className="even:bg-gray-50">
-//                {headers.map((col, i) => {
-//                  const val = row[col];
-//                  return (
-//                    <td key={i} className="px-4 py-2">
-//                      {typeof val === 'object' && val !== null
-//                        ? JSON.stringify(val)
-//                        : val}
-//                    </td>
-//                  );
-//                })}
-//              </tr>
-//            ))}
-//          </tbody>
-
-//         </table>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default ResultsTable;
-
-// src/components/ResultsTable.jsx (MODERN UI VERSION)
+// src/components/ResultsTable.jsx (FIXED AMOUNT DISPLAY VERSION)
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -66,19 +9,26 @@ const ResultsTable = ({ title, data }) => {
   const [sortDirection, setSortDirection] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Flatten deeply nested rows for uniform rendering
+  // FIXED: Enhanced flatten function that properly handles amounts and nested data
   const flattenRow = (row) => {
     const flat = {};
+
+    // First, copy all top-level properties
     for (const key in row) {
-      if (typeof row[key] === "object" && row[key] !== null && !Array.isArray(row[key])) {
-        // Merge nested object keys with prefix
-        for (const subKey in row[key]) {
-          flat[`${key}_${subKey}`] = row[key][subKey];
+      const value = row[key];
+
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        // Handle nested objects by flattening them
+        for (const subKey in value) {
+          const flatKey = `${key}_${subKey}`;
+          flat[flatKey] = value[subKey];
         }
       } else {
-        flat[key] = row[key];
+        // Direct copy for primitive values and arrays
+        flat[key] = value;
       }
     }
+
     return flat;
   };
 
@@ -107,8 +57,17 @@ const ResultsTable = ({ title, data }) => {
       const aVal = a[sortColumn];
       const bVal = b[sortColumn];
 
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      // Handle numeric sorting for amounts
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      // Handle string sorting
+      const aStr = String(aVal);
+      const bStr = String(bVal);
+
+      if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
+      if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
   }, [filteredData, sortColumn, sortDirection]);
@@ -128,14 +87,70 @@ const ResultsTable = ({ title, data }) => {
     }
   };
 
-  const formatValue = (value) => {
+  // FIXED: Enhanced formatValue function that properly handles amounts
+  const formatValue = (value, columnName) => {
+    // Handle null/undefined values
+    if (value === null || value === undefined) {
+      return 'N/A';
+    }
+
+    // Handle arrays (like match_reasons)
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    // Handle objects
     if (typeof value === 'object' && value !== null) {
       return JSON.stringify(value);
     }
+
+    // Handle numbers - especially amounts
     if (typeof value === 'number') {
+      // Check if this is likely a monetary amount
+      if (columnName && (
+        columnName.toLowerCase().includes('amount') ||
+        columnName.toLowerCase().includes('price') ||
+        columnName.toLowerCase().includes('cost') ||
+        columnName.toLowerCase().includes('diff')
+      )) {
+        // Format as currency
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
+      }
+
+      // Format as regular number with commas
       return value.toLocaleString();
     }
-    return String(value);
+
+    // Handle strings
+    const stringValue = String(value);
+
+    // If it's a string that looks like a number, try to format it
+    if (!isNaN(stringValue) && stringValue.trim() !== '') {
+      const numValue = parseFloat(stringValue);
+      if (columnName && columnName.toLowerCase().includes('amount')) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(numValue);
+      }
+      return numValue.toLocaleString();
+    }
+
+    return stringValue;
+  };
+
+  // FIXED: Enhanced header formatting
+  const formatHeaderName = (columnName) => {
+    return columnName
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+      .replace(/Id\b/g, 'ID')
+      .replace(/Ref No/g, 'Reference')
+      .replace(/Ledger Amount/g, 'Ledger Amount ($)')
+      .replace(/Bank Amount/g, 'Bank Amount ($)');
   };
 
   const getTableIcon = (title) => {
@@ -150,6 +165,20 @@ const ResultsTable = ({ title, data }) => {
     if (title.includes('Ledger')) return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
     if (title.includes('Bank')) return 'from-purple-500/20 to-pink-500/20 border-purple-500/30';
     return 'from-gray-500/20 to-slate-500/20 border-gray-500/30';
+  };
+
+  // FIXED: Better column width handling for amounts
+  const getColumnClass = (columnName) => {
+    if (columnName.toLowerCase().includes('amount') || columnName.toLowerCase().includes('diff')) {
+      return 'text-right font-mono'; // Right-align amounts and use monospace font
+    }
+    if (columnName.toLowerCase().includes('date')) {
+      return 'text-center';
+    }
+    if (columnName.toLowerCase().includes('ref') || columnName.toLowerCase().includes('id')) {
+      return 'text-center font-mono text-xs';
+    }
+    return '';
   };
 
   if (!data || data.length === 0) {
@@ -227,10 +256,10 @@ const ResultsTable = ({ title, data }) => {
                   <th
                     key={column}
                     onClick={() => handleSort(column)}
-                    className="px-6 py-4 text-left text-sm font-semibold text-white cursor-pointer hover:bg-white/5 transition-colors duration-200 select-none"
+                    className={`px-6 py-4 text-left text-sm font-semibold text-white cursor-pointer hover:bg-white/5 transition-colors duration-200 select-none ${getColumnClass(column)}`}
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="capitalize">{column.replace(/_/g, ' ')}</span> 
+                      <span>{formatHeaderName(column)}</span>
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: sortColumn === column ? 1 : 0.3 }}
@@ -256,13 +285,18 @@ const ResultsTable = ({ title, data }) => {
                   >
                     {headers.map((column, colIdx) => {
                       const value = row[column];
+                      const formattedValue = formatValue(value, column);
+
                       return (
                         <td
                           key={colIdx}
-                          className="px-6 py-4 text-sm text-white/90 max-w-xs"
+                          className={`px-6 py-4 text-sm text-white/90 max-w-xs ${getColumnClass(column)}`}
                         >
-                          <div className="truncate" title={formatValue(value)}>
-                            {formatValue(value)}
+                          <div
+                            className="truncate"
+                            title={typeof value === 'object' ? JSON.stringify(value) : String(formattedValue)}
+                          >
+                            {formattedValue}
                           </div>
                         </td>
                       );
@@ -297,7 +331,6 @@ const ResultsTable = ({ title, data }) => {
                   const page = i + 1;
                   const isCurrentPage = page === currentPage;
 
-                  // Show first page, last page, current page, and pages around current page
                   if (
                     page === 1 ||
                     page === totalPages ||
@@ -338,6 +371,16 @@ const ResultsTable = ({ title, data }) => {
           </div>
         )}
       </div>
+
+      {/* Debug Info - Remove this after testing */}
+      {process.env.NODE_ENV === 'development' && data.length > 0 && (
+        <details className="bg-black/20 rounded p-4 text-xs">
+          <summary className="text-white cursor-pointer">Debug: First Row Data</summary>
+          <pre className="text-green-400 mt-2 overflow-auto">
+            {JSON.stringify(data[0], null, 2)}
+          </pre>
+        </details>
+      )}
     </motion.div>
   );
 };

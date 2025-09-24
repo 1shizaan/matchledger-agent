@@ -17,7 +17,7 @@ except Exception as e:
 
 # Initialize ChromaDB client and collection
 client = chromadb.Client()
-collection = client.get_or_create_collection(name="narration_pairs", metadata={"hnsw:space": "cosine"}) # Ensure cosine distance for consistency        
+collection = client.get_or_create_collection(name="narration_pairs", metadata={"hnsw:space": "cosine"}) # Ensure cosine distance for consistency
 
 def get_openai_embedding(text: str):
     """
